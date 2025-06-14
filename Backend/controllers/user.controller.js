@@ -2,6 +2,9 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// ========================
+// REGISTER
+// ========================
 export const register = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, password, role } = req.body;
@@ -36,14 +39,18 @@ export const register = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.error(error.message);
+    console.error("Registration Error:", error.message);
     return res.status(500).json({
       message: "Something went wrong",
+      error: error.message,
       success: false,
     });
   }
 };
 
+// ========================
+// LOGIN
+// ========================
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -55,7 +62,7 @@ export const login = async (req, res) => {
       });
     }
 
-    let user = await User.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
         message: "Invalid email or password",
@@ -71,9 +78,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const tokenData = { userId: user._id };
-
-    const token = jwt.sign(tokenData, process.env.SECRET_KEY, {
+    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
       expiresIn: "1d",
     });
 
@@ -87,16 +92,21 @@ export const login = async (req, res) => {
       .json({
         message: `Logged in successfully, ${user.fullname}`,
         success: true,
+        token, // helpful for testing
       });
   } catch (error) {
-    console.error(error.message);
+    console.error("Login Error:", error.message);
     return res.status(500).json({
       message: "Something went wrong",
+      error: error.message,
       success: false,
     });
   }
 };
 
+// ========================
+// LOGOUT
+// ========================
 export const logout = async (req, res) => {
   try {
     return res
@@ -107,16 +117,25 @@ export const logout = async (req, res) => {
         success: true,
       });
   } catch (error) {
-    console.log(error);
+    console.error("Logout Error:", error.message);
+    return res.status(500).json({
+      message: "Logout failed",
+      error: error.message,
+      success: false,
+    });
   }
 };
 
+// ========================
+// UPDATE PROFILE
+// ========================
 export const updateProfile = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
     const file = req.file;
 
     const userId = req.id || req.user?.id; // From middleware
+
     let user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -125,13 +144,21 @@ export const updateProfile = async (req, res) => {
       });
     }
 
+    // Initialize nested profile if undefined
+    if (!user.profile) user.profile = {};
+
+    // Update basic fields
     if (fullname) user.fullname = fullname;
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
-    if (skills) user.profile.skills = skills.split(",");
+    if (skills) {
+      const skillsArray = skills.split(",").map(skill => skill.trim());
+      user.profile.skills = skillsArray;
+    }
 
-    // TODO: Add resume upload and cloudinary if required
+    // TODO: Add file upload logic (Cloudinary etc.)
+
     await user.save();
 
     const sanitizedUser = {
@@ -149,9 +176,10 @@ export const updateProfile = async (req, res) => {
       user: sanitizedUser,
     });
   } catch (error) {
-    console.log(error.message);
+    console.error("Profile Update Error:", error.message);
     return res.status(500).json({
       message: "Error updating profile",
+      error: error.message,
       success: false,
     });
   }
