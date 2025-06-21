@@ -1,15 +1,14 @@
-import { application } from "express";
-import mongoosefrom from "mongoose";
+import mongoose from "mongoose";
+
 const applicationSchema = new mongoose.Schema(
   {
     job: {
-      type: mongoose.Schema.Type.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
       required: true,
     },
-
-    application: {
-      type: mongoose.Schema.Type.ObjectId,
+    applicant: {
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
@@ -19,6 +18,7 @@ const applicationSchema = new mongoose.Schema(
       default: "pending",
     },
   },
-  { timeseries: true }
+  { timestamps: true }
 );
+
 export const Application = mongoose.model("Application", applicationSchema);
